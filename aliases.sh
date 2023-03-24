@@ -87,7 +87,7 @@ git-amend() {( set -e  #fail early
 # <try>
     git add --all
   
-    if [ -n "$1" ]; then
+    if [[ -n "$1" ]]; then
         git commit --amend --reset-author --message="$1";
     else
         git commit --amend --reset-author --no-edit;
@@ -164,7 +164,7 @@ git-sync() {( set -e  #fail early
 
 git-clean() {( set -e  #fail early
 # <try>
-    if [ -n "$1" ]; then
+    if [[ -n "$1" ]]; then
         git reflog expire --expire-unreachable=now --all;
     else
         git gc --prune=now --aggressive;
@@ -217,8 +217,27 @@ git-rebase() {( set -e  #fail early
 ) || git_exit; }
 
 
+git-merge() {( set -e  #fail early
+# <try>
+    if [[ -z "$1" ]]; then exit 1; fi
+
+    if [[ -n "$2" ]]; then
+        EDITOR=true git merge "$1" --no-ff -m "$2";
+    else
+        EDITOR=true git merge "$1" --no-ff --log;
+    fi;
+# <end>
+) || git_exit; }
+
+
 # miscellaneous
 # ----------------------------------------------------------------------------------
+
+__git_branches() {
+  echo "$(git branch -a | tr '\n' ' ')";
+}
+
+complete -W "$(__git_branches)" git-merge
 
 
 } # this ensures the entire script is downloaded #
