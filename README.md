@@ -17,10 +17,10 @@ apt install git
 
 To **install** or **update**, you should run the install script. To do that, you may either download and run the script manually or use the following cURL or wget command:
 ```sh
-curl -o- https://raw.githubusercontent.com/webcdn/git-aliases/v1.0-beta/install.sh | bash
+curl -o- https://raw.githubusercontent.com/vulrun/git-aliases/v1.1-beta/install.sh | bash
 ```
 ```sh
-wget -qO- https://raw.githubusercontent.com/webcdn/git-aliases/v1.0-beta/install.sh | bash
+wget -qO- https://raw.githubusercontent.com/vulrun/git-aliases/v1.1-beta/install.sh | bash
 ```
 Running either of the above commands downloads a script and runs it. The script downloads the script to `$HOME` generally at `~/`, and attempts to add the source lines from the snippet below to the correct profile file (`~/.bash_profile`, `~/.zshrc`, `~/.profile`, or `~/.bashrc`).
 
@@ -107,6 +107,27 @@ git-ll
 git-it "your commit message"
 ```
 
+Please ensure your commit message follows the conventional commits format:
+> `type(scope): description`
+
+  - **type** could be one of: build, chore, ci, docs, feat, fix, perf, refactor, revert, style
+  - **scope** is optional and can be anything specifying the place of the commit change
+  - **description** is a short description of the change
+
+
+These conventions make it easier for others to understand the changes, streamline the development process, and help in generating changelogs or navigating through the history of the project.
+
+- **build**: changes that affect the build system or external dependencies
+- **chore**: regular code maintenance
+- **ci**: changes made to CI configuration files and scripts
+- **docs**: documentation related changes
+- **feat**: a new feature added
+- **fix**: a bug fix
+- **perf**: changes that improves performance
+- **refactor**: changes that neither fixes a bug nor adds a feature
+- **revert**: if the commit reverts a previous commit, this is used with the hash of the commit being reverted
+- **style**: changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc)
+- **test**: changes that adds missing tests or corrects existing tests
 
 ### git-up
 > Add all files to staged list and commit it. Finally, **push up** to the remote server. You may specify origin & branch at the end.
@@ -237,6 +258,35 @@ git-rebase HEAD~5
 git-rebase --root
 ```
 
+
+### git-merge
+> **Automatically Merge Branch**. This ensures that the merge is always done with a separate merge commit.
+```sh
+# merging new branches
+git-merge feature-branch
+git-merge another-feature-branch
+```
+
+
+
+### git-reset & git-resetf
+> **Remove Commit**. If reset with `git-resetf`, codes are **forced** to be updated.
+```sh
+# removes last commit from history only
+git-reset
+
+# removes commit upto this hash,
+# but the code remains unchanged
+git-reset 84c63b39
+git-reset 84c63b3910bb28b5f0549e235ac0f4f3a3c71a1b
+
+# removes last commit & codes
+git-resetf
+
+# removes upto commit hash & codes
+git-resetf 84c63b39
+git-resetf 84c63b3910bb28b5f0549e235ac0f4f3a3c71a1b
+```
 
 ## Examples
 #### Example 1
