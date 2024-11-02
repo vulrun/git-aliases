@@ -1,4 +1,4 @@
-# Git Aliases ![v0.0.1-beta](https://img.shields.io/static/v1?style=flat-square&label=version&message=v1.0-beta&color=blue)
+# Git Aliases ![v1.2-beta](https://img.shields.io/static/v1?style=flat-square&label=version&message=v1.2-beta&color=blue)
 
 
 ## About
@@ -17,10 +17,10 @@ apt install git
 
 To **install** or **update**, you should run the install script. To do that, you may either download and run the script manually or use the following cURL or wget command:
 ```sh
-curl -o- https://raw.githubusercontent.com/vulrun/git-aliases/v1.1-beta/install.sh | bash
+curl -o- https://raw.githubusercontent.com/vulrun/git-aliases/v1.2-beta/install.sh | bash
 ```
 ```sh
-wget -qO- https://raw.githubusercontent.com/vulrun/git-aliases/v1.1-beta/install.sh | bash
+wget -qO- https://raw.githubusercontent.com/vulrun/git-aliases/v1.2-beta/install.sh | bash
 ```
 Running either of the above commands downloads a script and runs it. The script downloads the script to `$HOME` generally at `~/`, and attempts to add the source lines from the snippet below to the correct profile file (`~/.bash_profile`, `~/.zshrc`, `~/.profile`, or `~/.bashrc`).
 
@@ -72,6 +72,7 @@ Arguments are written in square braces `[...]` are optional. `[**]` denotes, you
 - `git-it "your commit message"`
 - `git-up ["your commit message" [origin [branch]]] [**]`
 - `git-amend ["your commit message"]`
+- `git-amend-now ["your commit message"]`
 - `git-push [origin [branch]] [**]`
 - `git-pushf [origin [branch]] [**]`
 - `git-pull [origin [branch]] [**]`
@@ -139,11 +140,20 @@ git-up "new featured changes" origin beta
 
 
 ### git-amend
-> **Modifying your last commit**. This will update commit time, author who is working at the foremost. If you are specifying the commit-message, then it will be updated too. Mostly used for correction purposes. In case of amendments, code must be pushed forcefully otherwise it will throw an error.
+> **Modifying your last commit**. This will update uncommit changes to the last commit. If you are specifying the commit-message, then it will be updated too. Mostly used for correction purposes. In case of amendments, code must be pushed forcefully otherwise it will throw an error.
 ```sh
 git-amend
 
 git-amend "your commit message"
+```
+
+
+### git-amend-now
+> **Modifying your last commit**. This will update commit time, author who is working at the foremost. If you are specifying the commit-message, then it will be updated too. Mostly used for correction purposes. In case of amendments, code must be pushed forcefully otherwise it will throw an error.
+```sh
+git-amend-now
+
+git-amend-now "your commit message"
 ```
 
 
@@ -267,6 +277,14 @@ git-merge feature-branch
 git-merge another-feature-branch
 ```
 
+
+### git-merge-to
+> **Automatically Merge Branch**. This helps to merge the feature branch to main branch without changing the branch, you can continue working in the same feature branch.
+```sh
+# merging feature branch to
+git-merge-to main-branch
+git-merge-to another-main-branch
+```
 
 
 ### git-reset & git-resetf
