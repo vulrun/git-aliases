@@ -3,11 +3,11 @@
 { # this ensures the entire script is downloaded #
 
   xyz_has() {
-    type "$1" >/dev/null 2>&1
+    type "$1" > /dev/null 2>&1
   }
 
   xyz_echo() {
-    command printf %s\\n "$*" 2>/dev/null
+    command printf %s\\n "$*" 2> /dev/null
   }
 
   xyz_grep() {
@@ -226,7 +226,7 @@
       fi
       if ! command grep -qc "$XYZ_FULL_PATH" "$XYZ_PROFILE"; then
         xyz_echo "=> Appending source string to $XYZ_PROFILE"
-        command printf "${XYZ_INCLUDE_STRING}" >>"$XYZ_PROFILE"
+        command printf "${XYZ_INCLUDE_STRING}" >> "$XYZ_PROFILE"
       else
         xyz_echo "=> source string already in ${XYZ_PROFILE}"
       fi

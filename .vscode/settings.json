@@ -1,0 +1,7 @@
+{
+  "[shellscript]": {
+    "editor.defaultFormatter": "mkhl.shfmt"
+  },
+  "shfmt.executablePath": "shfmt",
+  "shfmt.executableArgs": ["-i", "2", "-sr", "-s"]
+}
