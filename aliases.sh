@@ -64,6 +64,9 @@
     fi
   }
 
+  alias git-log="git-ll"
+  alias git-logs="git-ll"
+
   # aliases
   # ----------------------------------------------------------------------------------
   # git aliases description
@@ -77,7 +80,7 @@
   git-ver() { (
     set -e #fail early
 
-    git_echo "v1.2-beta"
+    git_echo "v1.3-beta"
   ) || git_exit "Failed to retrieve git version"; }
 
   # long list of commit history
@@ -320,6 +323,66 @@
     fi
   ) || git_exit "Failed to force reset commit"; }
 
+  # stash all changes
+  git-stash() { (
+    set -e #fail early
+
+    git stash push -u
+
+  ) || git_exit "Failed to stash all changes"; }
+
+  # stash only staged files
+  git-sstash() { (
+    set -e #fail early
+
+    # save staged changes to a patch
+    git diff --cached > /tmp/.git-staged.patch
+    # save unstaged changes to a patch
+    git diff > /tmp/.git-unstaged.patch
+
+    # discard unstaged changes
+    git restore .
+
+    # stash everything including untracked files (currently staged lefts only)
+    git stash push -u
+
+    # reapply unstaged changes from patch
+    git apply /tmp/.git-unstaged.patch
+
+    # clean up
+    rm -vf /tmp/.git-staged.patch
+    rm -vf /tmp/.git-unstaged.patch
+  ) || git_exit "Failed to stash staged changes"; }
+
+  git-nstash() { (
+    set -e #fail early
+
+    # save staged changes to a patch
+    git diff --cached > /tmp/.git-staged.patch
+    # save unstaged changes to a patch
+    git diff > /tmp/.git-unstaged.patch
+
+    # discard staged changes to unstaged
+    git restore --staged .
+    # discard unstaged changes (all-cleared)
+    git restore .
+
+    # reapply unstaged again to push to stash
+    git apply /tmp/.git-unstaged.patch
+
+    # Stash everything including untracked files
+    git stash push -u
+
+    # reapply staged changes from patch
+    git apply --cached /tmp/.git-staged.patch
+    # remove old changes from unstaged
+    git restore .
+
+    # clean up
+    rm -vf /tmp/.git-staged.patch
+    rm -vf /tmp/.git-unstaged.patch
+  ) || git_exit "Failed to stash unstaged changes"; }
+
   # miscellaneous
   # ----------------------------------------------------------------------------------
 
@@ -336,6 +399,7 @@
     complete -W "$(__git_branches)" git-merge-to
     complete -W "$(__git_branches)" git-reset
     complete -W "$(__git_branches)" git-resetf
+    complete -W "$(__git_branches)" git-rebase
   fi
 
 } # this ensures the entire script is downloaded #

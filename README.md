@@ -1,5 +1,15 @@
-# Git Aliases ![v1.2-beta](https://img.shields.io/static/v1?style=flat-square&label=version&message=v1.2-beta&color=blue)
+# Git Aliases ![v1.3-beta](https://img.shields.io/static/v1?style=flat-square&label=version&message=v1.3-beta&color=blue)
 
+## Table of Contents
+- [About](#about)
+- [Prerequisite](#prerequisite)
+- [Installation](#installation)
+- [Aliases](#aliases)
+- [Examples](#examples)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
 
 ## About
 git_aliases provide short-hands for [git](https://git-scm.com). Immensely are the functions written for saving the time of each developer. `git` works on any POSIX-compliant shell (sh, dash, ksh, zsh, bash), in particular on these platforms: unix, macOS, and windows WSL.
@@ -17,10 +27,10 @@ apt install git
 
 To **install** or **update**, you should run the install script. To do that, you may either download and run the script manually or use the following cURL or wget command:
 ```sh
-curl -o- https://raw.githubusercontent.com/vulrun/git-aliases/v1.2-beta/install.sh | bash
+curl -o- https://raw.githubusercontent.com/vulrun/git-aliases/v1.3-beta/install.sh | bash
 ```
 ```sh
-wget -qO- https://raw.githubusercontent.com/vulrun/git-aliases/v1.2-beta/install.sh | bash
+wget -qO- https://raw.githubusercontent.com/vulrun/git-aliases/v1.3-beta/install.sh | bash
 ```
 Running either of the above commands downloads a script and runs it. The script downloads the script to `$HOME` generally at `~/`, and attempts to add the source lines from the snippet below to the correct profile file (`~/.bash_profile`, `~/.zshrc`, `~/.profile`, or `~/.bashrc`).
 
@@ -67,23 +77,31 @@ Edit your profile-files `~/.bashrc`, `~/.profile`, or `~/.zshrc` (or other shell
 ----------------------------
 ## Aliases
 Arguments are written in square braces `[...]` are optional. `[**]` denotes, you can always use core options/commands from core `git`.
-- `git-ver`
-- `git-ll`
-- `git-it "your commit message"`
-- `git-up ["your commit message" [origin [branch]]] [**]`
-- `git-amend ["your commit message"]`
-- `git-amend-now ["your commit message"]`
-- `git-push [origin [branch]] [**]`
-- `git-pushf [origin [branch]] [**]`
-- `git-pull [origin [branch]] [**]`
-- `git-pullf [origin [branch]]`
-- `git-clean [reflogs]`
-- `git-clear`
-- `git-sync [origin [branch]]`
-- `git-fixit`
-- `git-fixup [origin [branch]] [**]`
-- `git-rebase [**]`
-
+- `git-ver` [goto 👇](#git-ver)
+- `git-ll` [goto 👇](#git-ll--git-log--git-logs)
+- `git-log` [goto 👇](#git-ll--git-log--git-logs)
+- `git-logs` [goto 👇](#git-ll--git-log--git-logs)
+- `git-it "your commit message"` [goto 👇](#git-it)
+- `git-up ["your commit message" [origin [branch]]] [**]` [goto 👇](#git-up)
+- `git-amend ["your commit message"]` [goto 👇](#git-amend)
+- `git-amend-now ["your commit message"]` [goto 👇](#git-amend-now)
+- `git-push [origin [branch]] [**]` [goto 👇](#git-push--git-pushf)
+- `git-pushf [origin [branch]] [**]` [goto 👇](#git-push--git-pushf)
+- `git-pull [origin [branch]] [**]` [goto 👇](#git-pull)
+- `git-pullf [origin [branch]]` [goto 👇](#git-pullf)
+- `git-clean [reflogs]` [goto 👇](#git-clean)
+- `git-clear` [goto 👇](#git-clear)
+- `git-sync [origin [branch]]` [goto 👇](#git-sync)
+- `git-fixit` [goto 👇](#git-fixit)
+- `git-fixup [origin [branch]] [**]` [goto 👇](#git-fixup)
+- `git-rebase [**]` [goto 👇](#git-rebase)
+- `git-merge <branch>` [goto 👇](#git-merge)
+- `git-merge-to <branch>` [goto 👇](#git-merge-to)
+- `git-reset [commit_hash]` [goto 👇](#git-reset--git-resetf)
+- `git-resetf [commit_hash]` [goto 👇](#git-reset--git-resetf)
+- `git-stash` [goto 👇](#git-stash)
+- `git-sstash` [goto 👇](#git-sstash)
+- `git-nstash` [goto 👇](#git-nstash)
 
 
 ### git-ver
@@ -94,10 +112,12 @@ git-ver
 ```
 
 
-### git-ll
+### git-ll && git-log && git-logs
 > Long List of **commit history**, each in single row with proper color for better readability _(latest to oldest order)_
 ```sh
 git-ll
+git-log
+git-logs
 # <comit-id> - <origin-branch> <commit-message> (<commit-time>) [<commit-author>]
 ```
 
@@ -306,6 +326,40 @@ git-resetf 84c63b39
 git-resetf 84c63b3910bb28b5f0549e235ac0f4f3a3c71a1b
 ```
 
+
+### git-stash
+> Stash **all changes**, including untracked files.
+
+This function stashes **all** your local changes (both staged and unstaged), including untracked files, safely.
+
+```sh
+git-stash
+```
+
+
+### git-sstash
+> Stash **only staged files**, keeping unstaged changes left in the working directory.
+
+Use this when you want to stash just the staged changes while leaving your unstaged changes untouched in the working directory.
+
+```sh
+git-sstash
+```
+
+
+### git-nstash
+> Stash **only unstaged files**, keeping staged changes left in the working directory.
+
+Use this when you want to stash just your unstaged changes, while keeping staged changes intact in your working directory.
+
+```sh
+git-nstash
+```
+
+
+----------------------------
+
+
 ## Examples
 #### Example 1
 ```sh
@@ -325,6 +379,7 @@ $ git-fixit
 $ git-rebase HEAD~3
 # e33621e8e - oauth added (a few seconds ago) [webcdn]
 ```
+
 ----------------------------
 
 

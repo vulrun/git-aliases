@@ -111,7 +111,7 @@
   }
 
   xyz_latest_version() {
-    xyz_echo "v1.2-beta"
+    xyz_echo "v1.3-beta"
   }
 
   xyz_file_name() {
@@ -120,7 +120,7 @@
 
   xyz_source() {
     local XYZ_GITHUB_REPO
-    XYZ_GITHUB_REPO="${XYZ_INSTALL_GITHUB_REPO:-webcdn/git-aliases}"
+    XYZ_GITHUB_REPO="${XYZ_INSTALL_GITHUB_REPO:-vulrun/git-aliases}"
 
     local XYZ_VERSION
     XYZ_VERSION="${XYZ_INSTALL_VERSION:-$(xyz_latest_version)}"
