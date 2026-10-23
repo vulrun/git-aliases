@@ -10,12 +10,14 @@
   }
 
   git_exit() {
-    # Catch errors, if any
-    if [ $? -ne 0 ]; then
-      echo
-      echo "==> ${1:-"Exiting, some unknown error occurred"}"
-      echo
+    # Report the failure of the previous command, if any, and pass its status on
+    local rc=$?
+    if [ $rc -ne 0 ]; then
+      echo >&2
+      echo "==> ${1:-"Exiting, some unknown error occurred"}" >&2
+      echo >&2
     fi
+    return $rc
   }
 
   git_detect_remote() {
@@ -71,30 +73,22 @@
   # ----------------------------------------------------------------------------------
   # git aliases description
   git-aliases() { (
-    set -e #fail early
-
     git_echo "git-aliases is at $(git-ver)"
   ) || git_exit "Failed to display git aliases version"; }
 
   # gives current git version
   git-ver() { (
-    set -e #fail early
-
     git_echo "v1.3-beta"
   ) || git_exit "Failed to retrieve git version"; }
 
   # long list of commit history
   git-ll() { (
-    set -e #fail early
-
     git log --abbrev-commit --decorate --pretty=format:"%C(yellow)%h %C(reset)-%C(red)%d %C(reset)%s %C(green)(%ar) %C(blue)[%an]" "$@"
   ) || git_exit "Failed to display commit history"; }
 
   # stage changes & commit
   git-it() { (
-    set -e #fail early
-
-    git add --all
+    git add --all || exit
 
     git_commit_lint "$1"
     git commit -m "$1"
@@ -102,17 +96,13 @@
 
   # commit changes & push
   git-up() { (
-    set -e #fail early
-
-    git-it "$1"
+    git-it "$1" || exit
     git-push "${@:2}"
   ) || git_exit "Failed to commit and push changes"; }
 
   # modify last commit
   git-amend() { (
-    set -e #fail early
-
-    git add --all
+    git add --all || exit
 
     if [[ -n $1 ]]; then
       git_commit_lint "$1"
@@ -124,9 +114,7 @@
 
   # modify last commit with current time
   git-amend-now() { (
-    set -e #fail early
-
-    git add --all
+    git add --all || exit
 
     if [[ -n $1 ]]; then
       git_commit_lint "$1"
@@ -138,8 +126,6 @@
 
   # push changes to remote
   git-push() { (
-    set -e #fail early
-
     if [[ -z $1 ]]; then local _ORIGIN; fi
     if [[ -z $2 ]]; then local _BRANCH; fi
     git_detect_remote "${@:1:2}"
@@ -149,8 +135,6 @@
 
   # push changes forcefully to remote
   git-pushf() { (
-    set -e #fail early
-
     if [[ -z $1 ]]; then local _ORIGIN; fi
     if [[ -z $2 ]]; then local _BRANCH; fi
     git_detect_remote "${@:1:2}"
@@ -160,8 +144,6 @@
 
   # pull changes from remote
   git-pull() { (
-    set -e #fail early
-
     if [[ -z $1 ]]; then local _ORIGIN; fi
     if [[ -z $2 ]]; then local _BRANCH; fi
     git_detect_remote "${@:1:2}"
@@ -171,21 +153,17 @@
 
   # update local code as per remote
   git-pullf() { (
-    set -e #fail early
-
     if [[ -z $1 ]]; then local _ORIGIN; fi
     if [[ -z $2 ]]; then local _BRANCH; fi
     git_detect_remote "${@:1:2}"
 
-    git fetch --all
+    git fetch --all || exit
     git reset --hard "$_ORIGIN/$_BRANCH"
   ) || git_exit "Failed to forcibly update local code"; }
 
   # remove unwanted reflogs
   git-clean() { (
-    set -e #fail early
-
-    git gc --prune=now --aggressive
+    git gc --prune=now --aggressive || exit
 
     git_echo
     git_echo "==> Git Repository Cleaned"
@@ -194,10 +172,8 @@
 
   # clear the workspace
   git-clear() { (
-    set -e #fail early
-
-    git reset --hard
-    git clean -df
+    git reset --hard || exit
+    git clean -df || exit
 
     git_echo
     git_echo "==> Git Repository Cleared"
@@ -227,41 +203,33 @@
 
   # fix for previous commit
   git-fixit() { (
-    set -e #fail early
-
     local _HASH="${1:-HEAD}"
 
-    _HASH="$(git rev-parse "$_HASH")"
+    _HASH="$(git rev-parse "$_HASH")" || exit
 
-    git add --all
+    git add --all || exit
     git commit --no-verify --fixup "$_HASH"
   ) || git_exit "Failed to create a fixup commit"; }
 
   # fix commit & push changes
   git-fixup() { (
-    set -e #fail early
-
-    git-fixit "$1"
+    git-fixit "$1" || exit
     git-push "${@:2}"
   ) || git_exit "Failed to fixup and push changes"; }
 
   # rebase all commit automatically
   git-rebase() { (
-    set -e #fail early
-
     EDITOR=true git rebase --interactive --autosquash --autostash --rebase-merges --no-fork-point "$@"
   ) || git_exit "Failed to rebase commits"; }
 
   # add merge
   git-merge() { (
-    set -e #fail early
-
     if [[ -z $1 ]]; then
       echo "Error: No branch specified."
       exit 1
     fi
 
-    current_branch=$(git rev-parse --abbrev-ref HEAD)
+    current_branch=$(git rev-parse --abbrev-ref HEAD) || exit
 
     if [[ $current_branch == "$1" ]]; then
       echo "Error: You cannot merge into the same branch you are currently on."
@@ -276,35 +244,30 @@
   ) || git_exit "Failed to merge branch"; }
 
   git-merge-to() { (
-    set -e # fail early
-
     if [[ -z $1 ]]; then
       echo "Error: No branch specified."
       exit 1
     fi
 
-    current_branch=$(git rev-parse --abbrev-ref HEAD)
+    current_branch=$(git rev-parse --abbrev-ref HEAD) || exit
 
     if [[ $current_branch == "$1" ]]; then
       echo "Error: You cannot merge into the same branch you are currently on."
       exit 1
     fi
 
+    git checkout "$1" || exit
     if [[ -n $2 ]]; then
-      git checkout "$1"
       EDITOR=true git merge "$current_branch" --no-ff -m "$2"
     else
-      git checkout "$1"
       EDITOR=true git merge "$current_branch" --no-ff --log
-    fi
+    fi || exit
     # Checkout back to the original branch
     git checkout "$current_branch"
   ) || git_exit "Failed to merge into target branch"; }
 
   # reset commit
   git-reset() { (
-    set -e #fail early
-
     if [[ -n $1 ]]; then
       git reset --soft "$1"
     else
@@ -314,8 +277,6 @@
 
   # reset commit forcefully
   git-resetf() { (
-    set -e #fail early
-
     if [[ -n $1 ]]; then
       git reset --hard "$1"
     else
@@ -325,62 +286,53 @@
 
   # stash all changes
   git-stash() { (
-    set -e #fail early
-
     git stash push -u
 
   ) || git_exit "Failed to stash all changes"; }
 
   # stash only staged files
   git-sstash() { (
-    set -e #fail early
+    cd "$(git rev-parse --show-toplevel)" || exit
 
-    # save staged changes to a patch
-    git diff --cached > /tmp/.git-staged.patch
-    # save unstaged changes to a patch
-    git diff > /tmp/.git-unstaged.patch
+    if git diff-index --cached --quiet HEAD; then
+      git_echo "==> No staged changes to stash"
+      exit
+    fi
 
-    # discard unstaged changes
-    git restore .
+    # refuse before touching anything if unstaged edits overlap the staged ones
+    git diff-index --cached --binary HEAD | git apply --reverse --check || exit
 
-    # stash everything including untracked files (currently staged lefts only)
-    git stash push -u
+    # record the staged state as a regular stash entry
+    branch="$(git rev-parse --abbrev-ref HEAD)" || exit
+    tree="$(git write-tree)" || exit
+    index="$(git commit-tree --no-gpg-sign -p HEAD -m "index on $branch" "$tree")" || exit
+    stash="$(git commit-tree --no-gpg-sign -p HEAD -p "$index" -m "On $branch: git-sstash" "$tree")" || exit
+    git stash store -m "On $branch: git-sstash" "$stash" || exit
 
-    # reapply unstaged changes from patch
-    git apply /tmp/.git-unstaged.patch
-
-    # clean up
-    rm -vf /tmp/.git-staged.patch
-    rm -vf /tmp/.git-unstaged.patch
+    # take the staged changes out of the working tree and index, leaving the unstaged ones
+    git diff-index --cached --binary HEAD | git apply --reverse || exit
+    git reset -q
   ) || git_exit "Failed to stash staged changes"; }
 
+  # stash only unstaged and untracked files
   git-nstash() { (
-    set -e #fail early
+    # nothing staged: a plain stash already holds just the unstaged changes
+    if git diff-index --cached --quiet HEAD; then
+      git stash push --include-untracked
+      exit
+    fi
 
-    # save staged changes to a patch
-    git diff --cached > /tmp/.git-staged.patch
-    # save unstaged changes to a patch
-    git diff > /tmp/.git-unstaged.patch
+    # park the staged changes in a temporary commit so the stash is taken on top of them
+    head="$(git rev-parse HEAD)" || exit
+    tmp="$(git commit-tree --no-gpg-sign -p HEAD -m "git-nstash: staged changes" "$(git write-tree)")" || exit
+    git reset -q --soft "$tmp" || exit
 
-    # discard staged changes to unstaged
-    git restore --staged .
-    # discard unstaged changes (all-cleared)
-    git restore .
+    git stash push --include-untracked
+    rc=$?
 
-    # reapply unstaged again to push to stash
-    git apply /tmp/.git-unstaged.patch
-
-    # Stash everything including untracked files
-    git stash push -u
-
-    # reapply staged changes from patch
-    git apply --cached /tmp/.git-staged.patch
-    # remove old changes from unstaged
-    git restore .
-
-    # clean up
-    rm -vf /tmp/.git-staged.patch
-    rm -vf /tmp/.git-unstaged.patch
+    # move HEAD back; the index and working tree still hold the staged changes
+    git reset -q --soft "$head" || exit
+    exit $rc
   ) || git_exit "Failed to stash unstaged changes"; }
 
   # miscellaneous
