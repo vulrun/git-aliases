@@ -20,15 +20,70 @@
     return $rc
   }
 
+  # pick one of several remotes with the arrow keys (or j/k) and Enter; prints the choice
+  git_choose_remote() {
+    local remotes="$1" selected="${2:-1}" count key remote i saved
+    count="$(printf '%s\n' "$remotes" | grep -c '')"
+    saved="$(stty -g < /dev/tty)" || exit 1
+    # read single keys without echo; put the terminal back however the menu ends
+    trap 'stty "$saved" < /dev/tty; printf "\033[?25h\n" > /dev/tty; exit 130' INT TERM
+    stty -echo -icanon min 1 time 0 < /dev/tty
+
+    printf '==> Multiple Remotes Detected, choose one (up/down, Enter; q to cancel):\n\033[?25l' > /dev/tty
+    while :; do
+      i=0
+      while IFS= read -r remote; do
+        i=$((i + 1))
+        if [[ $i -eq $selected ]]; then
+          printf '\r\033[K  > %s\n' "$remote"
+        else
+          printf '\r\033[K    %s\n' "$remote"
+        fi
+      done <<< "$remotes" > /dev/tty
+
+      key="$(dd bs=1 count=1 2> /dev/null < /dev/tty)"
+      [[ $key == $'\033' ]] && key="$key$(dd bs=1 count=2 2> /dev/null < /dev/tty)"
+      case "$key" in
+      $'\033[A' | k) [[ $selected -gt 1 ]] && selected=$((selected - 1)) ;;
+      $'\033[B' | j) [[ $selected -lt $count ]] && selected=$((selected + 1)) ;;
+      '') break ;;
+      q)
+        selected=0
+        break
+        ;;
+      esac
+      printf '\033[%sA' "$count" > /dev/tty
+    done
+
+    # restore the terminal and clear the menu; the caller prints the choice
+    stty "$saved" < /dev/tty
+    printf '\033[%sA\r\033[J\033[?25h' "$((count + 1))" > /dev/tty
+    [[ $selected -gt 0 ]] || exit 1
+    printf '%s\n' "$remotes" | sed -n "${selected}p"
+  }
+
   git_detect_remote() {
     if [[ -z $1 ]]; then
       _ORIGIN="$(git remote)"
       _LENGTH="$(git remote | wc -l)"
-      if [[ $_LENGTH -eq 1 ]]; then
+      if [[ $_LENGTH -eq 0 ]]; then
+        echo >&2 "Error: This repository has no remotes."
+        exit 1
+      elif [[ $_LENGTH -eq 1 ]]; then
         git_echo "==> Detected Remote: $_ORIGIN"
+      elif [ -t 0 ]; then
+        # start on the current branch's upstream remote, else on origin
+        local upstream
+        upstream="$(git config "branch.$(git symbolic-ref --short -q HEAD).remote" || echo origin)"
+        _ORIGIN="$(git_choose_remote "$_ORIGIN" "$(printf '%s\n' "$_ORIGIN" | grep -nxF -- "$upstream" | cut -d: -f1)")" || {
+          git_echo "==> No remote chosen"
+          exit 1
+        }
+        git_echo "==> Selected Remote: $_ORIGIN"
       else
-        git_echo "==> Multiple Remotes Detected:"
-        git_echo "$_ORIGIN"
+        git_echo >&2 "==> Multiple Remotes Detected:"
+        git_echo >&2 "$_ORIGIN"
+        git_echo >&2 "==> Pass the remote to use as the first argument, e.g. git-push origin"
         exit 1
       fi
     else
@@ -37,7 +92,10 @@
     fi
 
     if [[ -z $2 ]]; then
-      _BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+      _BRANCH="$(git symbolic-ref --short -q HEAD)" || {
+        echo >&2 "Error: Not on a branch (detached HEAD). Pass the branch to use as the second argument."
+        exit 1
+      }
       git_echo "==> Detected Branch: $_BRANCH"
     else
       _BRANCH="$2"
@@ -47,21 +105,24 @@
 
   git_commit_lint() {
     local message_string="$1"
-    # Regular expression pattern
-    regex="^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style)(\([a-zA-Z0-9]+\))?: .*$"
+    # type(scope)!: description -- scope and ! are optional, description must not be blank
+    local regex="^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^()]+\))?!?: [^[:space:]].*$"
 
     if [[ $message_string =~ $regex ]]; then
       echo ">> Your commit message adheres to the commit rules"
       echo
     else
-      echo
-      echo "Oops! Your commit message does not conform to the commit rules."
-      echo "Please ensure your commit message follows the conventional commits format:"
-      echo "  type(scope): description"
-      echo "Where:"
-      echo "  - 'type' could be one of: build, chore, ci, docs, feat, fix, perf, refactor, revert, style"
-      echo "  - 'scope' is optional and can be anything specifying the place of the commit change"
-      echo "  - 'description' is a short description of the change"
+      {
+        echo
+        echo "Oops! Your commit message does not conform to the commit rules."
+        echo "Please ensure your commit message follows the conventional commits format:"
+        echo "  type(scope)!: description"
+        echo "Where:"
+        echo "  - 'type' could be one of: build, chore, ci, docs, feat, fix, perf, refactor, revert, style, test"
+        echo "  - 'scope' is optional and can be anything specifying the place of the commit change"
+        echo "  - '!' is optional and marks a breaking change"
+        echo "  - 'description' is a short description of the change"
+      } >&2
       exit 1
     fi
   }
@@ -78,7 +139,7 @@
 
   # gives current git version
   git-ver() { (
-    git_echo "v1.3-beta"
+    git_echo "v2.0-beta"
   ) || git_exit "Failed to retrieve git version"; }
 
   # long list of commit history
@@ -88,9 +149,9 @@
 
   # stage changes & commit
   git-it() { (
-    git add --all || exit
-
     git_commit_lint "$1"
+
+    git add --all || exit
     git commit -m "$1"
   ) || git_exit "Failed to stage and commit changes"; }
 
@@ -102,10 +163,10 @@
 
   # modify last commit
   git-amend() { (
-    git add --all || exit
+    [[ -z $1 ]] || git_commit_lint "$1"
 
+    git add --all || exit
     if [[ -n $1 ]]; then
-      git_commit_lint "$1"
       git commit --amend --message="$1"
     else
       git commit --amend --no-edit
@@ -114,10 +175,10 @@
 
   # modify last commit with current time
   git-amend-now() { (
-    git add --all || exit
+    [[ -z $1 ]] || git_commit_lint "$1"
 
+    git add --all || exit
     if [[ -n $1 ]]; then
-      git_commit_lint "$1"
       git commit --amend --reset-author --message="$1"
     else
       git commit --amend --reset-author --no-edit
@@ -126,8 +187,6 @@
 
   # push changes to remote
   git-push() { (
-    if [[ -z $1 ]]; then local _ORIGIN; fi
-    if [[ -z $2 ]]; then local _BRANCH; fi
     git_detect_remote "${@:1:2}"
 
     git push "${_ORIGIN}" "${_BRANCH}" "${@:3}"
@@ -135,17 +194,13 @@
 
   # push changes forcefully to remote
   git-pushf() { (
-    if [[ -z $1 ]]; then local _ORIGIN; fi
-    if [[ -z $2 ]]; then local _BRANCH; fi
     git_detect_remote "${@:1:2}"
 
-    git push --force "${_ORIGIN}" "${_BRANCH}" "${@:3}"
+    git push --force-with-lease --force-if-includes "${_ORIGIN}" "${_BRANCH}" "${@:3}"
   ) || git_exit "Failed to force push changes"; }
 
   # pull changes from remote
   git-pull() { (
-    if [[ -z $1 ]]; then local _ORIGIN; fi
-    if [[ -z $2 ]]; then local _BRANCH; fi
     git_detect_remote "${@:1:2}"
 
     git pull "${_ORIGIN}" "${_BRANCH}" "${@:3}"
@@ -153,8 +208,6 @@
 
   # update local code as per remote
   git-pullf() { (
-    if [[ -z $1 ]]; then local _ORIGIN; fi
-    if [[ -z $2 ]]; then local _BRANCH; fi
     git_detect_remote "${@:1:2}"
 
     git fetch --all || exit
@@ -173,7 +226,7 @@
   # clear the workspace
   git-clear() { (
     git reset --hard || exit
-    git clean -df || exit
+    git clean -df :/ || exit
 
     git_echo
     git_echo "==> Git Repository Cleared"
@@ -182,19 +235,27 @@
 
   # sync everything
   git-sync() { (
-    set -e #fail early
-
-    if [[ -z $1 ]]; then local _ORIGIN; fi
-    if [[ -z $2 ]]; then local _BRANCH; fi
     git_detect_remote "${@:1:2}"
 
-    git add --all
-    git stash
-    git fetch --all
-    git checkout "$_BRANCH"
-    git reset --hard "$_ORIGIN/$_BRANCH"
-    git remote prune "$_ORIGIN"
-    git stash pop
+    # stash local changes, noting whether a new stash entry was actually created
+    before="$(git rev-parse -q --verify refs/stash)"
+    git stash push --include-untracked || exit
+    after="$(git rev-parse -q --verify refs/stash)"
+
+    git fetch --all &&
+      git checkout "$_BRANCH" &&
+      git reset --hard "$_ORIGIN/$_BRANCH" &&
+      git remote prune "$_ORIGIN"
+    rc=$?
+
+    # bring local changes back even if syncing stopped part-way
+    if [[ $after != "$before" ]]; then
+      git stash pop || {
+        git_echo "==> Your local changes are kept in stash@{0}"
+        exit 1
+      }
+    fi
+    [[ $rc -eq 0 ]] || exit $rc
 
     git_echo
     git_echo "==> Synced with '$_ORIGIN/$_BRANCH'"
@@ -213,54 +274,60 @@
 
   # fix commit & push changes
   git-fixup() { (
-    git-fixit "$1" || exit
-    git-push "${@:2}"
+    # a remote as the first argument means "fix HEAD and push there"
+    if [[ -n $1 ]] && git remote | grep -qxF -- "$1"; then
+      git-fixit || exit
+      git-push "$@"
+    else
+      git-fixit "$1" || exit
+      git-push "${@:2}"
+    fi
   ) || git_exit "Failed to fixup and push changes"; }
 
   # rebase all commit automatically
   git-rebase() { (
-    EDITOR=true git rebase --interactive --autosquash --autostash --rebase-merges --no-fork-point "$@"
+    GIT_SEQUENCE_EDITOR=true GIT_EDITOR=true git rebase --interactive --autosquash --autostash --rebase-merges --no-fork-point "$@"
   ) || git_exit "Failed to rebase commits"; }
 
   # add merge
   git-merge() { (
     if [[ -z $1 ]]; then
-      echo "Error: No branch specified."
+      echo >&2 "Error: No branch specified."
       exit 1
     fi
 
     current_branch=$(git rev-parse --abbrev-ref HEAD) || exit
 
     if [[ $current_branch == "$1" ]]; then
-      echo "Error: You cannot merge into the same branch you are currently on."
+      echo >&2 "Error: You cannot merge into the same branch you are currently on."
       exit 1
     fi
 
     if [[ -n $2 ]]; then
-      EDITOR=true git merge "$1" --no-ff -m "$2"
+      git merge "$1" --no-ff --no-edit -m "$2"
     else
-      EDITOR=true git merge "$1" --no-ff --log
+      git merge "$1" --no-ff --no-edit --log
     fi
   ) || git_exit "Failed to merge branch"; }
 
   git-merge-to() { (
     if [[ -z $1 ]]; then
-      echo "Error: No branch specified."
+      echo >&2 "Error: No branch specified."
       exit 1
     fi
 
     current_branch=$(git rev-parse --abbrev-ref HEAD) || exit
 
     if [[ $current_branch == "$1" ]]; then
-      echo "Error: You cannot merge into the same branch you are currently on."
+      echo >&2 "Error: You cannot merge into the same branch you are currently on."
       exit 1
     fi
 
     git checkout "$1" || exit
     if [[ -n $2 ]]; then
-      EDITOR=true git merge "$current_branch" --no-ff -m "$2"
+      git merge "$current_branch" --no-ff --no-edit -m "$2"
     else
-      EDITOR=true git merge "$current_branch" --no-ff --log
+      git merge "$current_branch" --no-ff --no-edit --log
     fi || exit
     # Checkout back to the original branch
     git checkout "$current_branch"
@@ -338,20 +405,15 @@
   # miscellaneous
   # ----------------------------------------------------------------------------------
 
-  __git_branches() {
-    if [ -d .git ]; then
-      echo "$(git branch -a | sed 's/^[* ]*//; s/remotes\///' | tr '\n' ' ' | xargs)"
-    else
-      echo ""
-    fi
+  # complete local and remote branch names, looked up at completion time
+  __git_aliases_complete_branches() {
+    # shellcheck disable=SC2207
+    COMPREPLY=($(compgen -W "$(git for-each-ref --format='%(refname:short)' refs/heads refs/remotes 2> /dev/null)" -- "${COMP_WORDS[COMP_CWORD]}"))
   }
 
-  if command -v git-ver &> /dev/null; then
-    complete -W "$(__git_branches)" git-merge
-    complete -W "$(__git_branches)" git-merge-to
-    complete -W "$(__git_branches)" git-reset
-    complete -W "$(__git_branches)" git-resetf
-    complete -W "$(__git_branches)" git-rebase
+  # bash-style completion; zsh only has `complete` after `bashcompinit`
+  if command -v complete &> /dev/null; then
+    complete -F __git_aliases_complete_branches git-merge git-merge-to git-reset git-resetf git-rebase
   fi
 
 } # this ensures the entire script is downloaded #
