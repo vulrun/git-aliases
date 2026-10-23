@@ -1,0 +1,34 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        # macOS runs the suite with its stock /bin/bash 3.2 and zsh
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck, zsh and wget
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then
+            sudo apt-get update -q
+            sudo apt-get install -yq shellcheck zsh wget
+          else
+            brew install shellcheck wget
+          fi
+
+      - name: shellcheck
+        run: shellcheck --severity=warning aliases.sh install.sh tests/run.sh
+
+      - name: tests (bash)
+        run: /bin/bash tests/run.sh
+
+      - name: tests (zsh)
+        run: /bin/bash tests/run.sh --shell zsh
